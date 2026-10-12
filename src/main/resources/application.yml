@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: kb-rag-backend
+  codec:
+    max-in-memory-size: 8MB
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.example.rag: DEBUG
+
+# 模型接入配置：多提供方从第一天就预留好，M4 阶段直接在这里加备选模型
+app:
+  llm:
+    default-provider: deepseek
+    providers:
+      deepseek:
+        enabled: true
+        base-url: https://api.deepseek.com
+        api-key: ${DEEPSEEK_API_KEY:}
+        chat-model: deepseek-chat
+        timeout: 60s
+        max-retries: 1
