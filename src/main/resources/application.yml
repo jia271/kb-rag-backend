@@ -59,3 +59,29 @@ app:
     max-chars: 800
     overlap-chars: 120
     min-chars: 120
+  # 向量化：DeepSeek 只有对话模型，没有 embedding 接口，所以这里要单独配置来源
+  embedding:
+    default-provider: local
+    batch-size: 16
+    providers:
+      # 本地兜底：不需要密钥，基于字符 n-gram 哈希。
+      # 只保证检索链路能跑通，语义效果远不如真实向量模型。
+      local:
+        enabled: true
+        dimensions: 512
+      # 真实向量模型示例（硅基流动，OpenAI 兼容协议，有免费额度）。
+      # 注册后把密钥填进 .env.local 的 SILICONFLOW_API_KEY，再把 default-provider 改成 siliconflow，
+      # 然后调用一次 POST /api/search/reindex 重建索引即可。
+      siliconflow:
+        enabled: false
+        base-url: https://api.siliconflow.cn/v1
+        api-key: ${SILICONFLOW_API_KEY:}
+        model: BAAI/bge-m3
+        dimensions: 1024
+        timeout: 60s
+  search:
+    # 索引目录；实际会按 "提供方-维度" 再分子目录，换模型时不会新旧向量混在一起
+    index-dir: ./data/index
+    top-k: 5
+    # RRF 融合参数，60 是常用经验值
+    rrf-k: 60

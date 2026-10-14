@@ -59,6 +59,10 @@ class DocumentIngestionServiceTest {
         assertThat(processed.getChunkCount()).isEqualTo(stored.size());
         assertThat(stored.get(0).getHeading()).isEqualTo("产品说明");
         assertThat(stored.get(0).getCharCount()).isEqualTo(stored.get(0).getContent().length());
+
+        // 索引是解析之后的独立步骤，单独等它完成
+        Document indexed = awaitIndexed(accepted.getId());
+        assertThat(indexed.getIndexedAt()).isNotNull();
     }
 
     @Test
@@ -106,5 +110,17 @@ class DocumentIngestionServiceTest {
             Thread.sleep(50L);
         }
         throw new AssertionError("等待文档解析完成超时：" + documentId);
+    }
+
+    private Document awaitIndexed(Long documentId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        while (System.currentTimeMillis() < deadline) {
+            Document document = documents.findById(documentId).orElseThrow();
+            if (document.getIndexedAt() != null) {
+                return document;
+            }
+            Thread.sleep(50L);
+        }
+        throw new AssertionError("等待文档进入索引超时：" + documentId);
     }
 }

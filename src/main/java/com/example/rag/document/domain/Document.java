@@ -54,4 +54,7 @@ public class Document {
     private Instant createdAt = Instant.now();
 
     private Instant parsedAt;
+
+    /** 进入检索索引的时间；为空说明文本已入库但还没被索引，搜不到 */
+    private Instant indexedAt;
 }

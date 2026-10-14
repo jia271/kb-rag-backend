@@ -61,6 +61,22 @@
 			<artifactId>commonmark</artifactId>
 			<version>0.30.1</version>
 		</dependency>
+		<!-- 内嵌检索：同一个引擎里既有 BM25 全文检索，也有 HNSW 向量检索 -->
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>9.12.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-analysis-common</artifactId>
+			<version>9.12.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-queryparser</artifactId>
+			<version>9.12.3</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>

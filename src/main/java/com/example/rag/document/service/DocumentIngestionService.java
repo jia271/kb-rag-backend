@@ -8,6 +8,7 @@ import com.example.rag.document.domain.DocumentStatus;
 import com.example.rag.document.parse.ParserRegistry;
 import com.example.rag.document.repository.DocumentChunkRepository;
 import com.example.rag.document.repository.DocumentRepository;
+import com.example.rag.retrieval.ChunkIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -37,6 +38,8 @@ public class DocumentIngestionService {
     private final DocumentRepository documents;
     private final DocumentChunkRepository chunks;
     private final DocumentProcessingService processingService;
+    private final DocumentIndexingService indexingService;
+    private final ChunkIndexService chunkIndex;
     private final IngestionProperties ingestionProperties;
     private final ParserRegistry parsers;
     private final Executor ingestionExecutor;
@@ -44,12 +47,16 @@ public class DocumentIngestionService {
     public DocumentIngestionService(DocumentRepository documents,
                                     DocumentChunkRepository chunks,
                                     DocumentProcessingService processingService,
+                                    DocumentIndexingService indexingService,
+                                    ChunkIndexService chunkIndex,
                                     IngestionProperties ingestionProperties,
                                     ParserRegistry parsers,
                                     @Qualifier(IngestionExecutorConfig.INGESTION_EXECUTOR) Executor ingestionExecutor) {
         this.documents = documents;
         this.chunks = chunks;
         this.processingService = processingService;
+        this.indexingService = indexingService;
+        this.chunkIndex = chunkIndex;
         this.ingestionProperties = ingestionProperties;
         this.parsers = parsers;
         this.ingestionExecutor = ingestionExecutor;
@@ -94,7 +101,11 @@ public class DocumentIngestionService {
         documents.save(document);
 
         Long documentId = document.getId();
-        ingestionExecutor.execute(() -> processingService.process(documentId));
+        ingestionExecutor.execute(() -> {
+            // 先落库（短事务），再向量化写索引（涉及外部调用，放在事务外）
+            processingService.process(documentId);
+            indexingService.index(documentId);
+        });
         log.info("已接收文档 {}（id={}，{} 字节），解析任务已派发", originalFileName, documentId, sizeBytes);
         return document;
     }
@@ -123,6 +134,11 @@ public class DocumentIngestionService {
             Files.deleteIfExists(Path.of(document.getStoragePath()));
         } catch (IOException error) {
             log.warn("删除原始文件失败：{}，{}", document.getStoragePath(), error.toString());
+        }
+        try {
+            chunkIndex.deleteDocument(documentId);
+        } catch (IOException error) {
+            log.warn("从索引中删除文档失败：{}", error.toString());
         }
         log.info("已删除文档 {}（id={}）", document.getFileName(), documentId);
     }

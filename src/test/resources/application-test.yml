@@ -11,3 +11,6 @@ app:
   ingestion:
     # 测试时不要污染项目目录
     storage-dir: ${java.io.tmpdir}/kb-rag-test-uploads
+  search:
+    # 每次运行用独立目录，避免上一轮留下的索引干扰断言
+    index-dir: ${java.io.tmpdir}/kb-rag-test-index-${random.uuid}

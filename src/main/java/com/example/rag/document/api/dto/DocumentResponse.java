@@ -13,7 +13,8 @@ public record DocumentResponse(
         int chunkCount,
         String failureReason,
         Instant createdAt,
-        Instant parsedAt
+        Instant parsedAt,
+        Instant indexedAt
 ) {
 
     public static DocumentResponse from(Document document) {
@@ -26,6 +27,7 @@ public record DocumentResponse(
                 document.getChunkCount(),
                 document.getFailureReason(),
                 document.getCreatedAt(),
-                document.getParsedAt());
+                document.getParsedAt(),
+                document.getIndexedAt());
     }
 }
