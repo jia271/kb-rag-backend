@@ -1,6 +1,7 @@
 package com.example.rag.llm;
 
 import com.example.rag.config.LlmProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -19,14 +20,14 @@ public class LlmClientRegistry {
     private final Map<String, LlmClient> clients = new LinkedHashMap<>();
     private final String defaultProvider;
 
-    public LlmClientRegistry(LlmProperties properties) {
+    public LlmClientRegistry(LlmProperties properties, ObjectMapper objectMapper) {
         this.defaultProvider = properties.getDefaultProvider();
         properties.getProviders().forEach((name, config) -> {
             if (!config.isEnabled()) {
                 log.info("模型提供方 {} 已禁用，跳过注册", name);
                 return;
             }
-            clients.put(name, new OpenAiCompatibleLlmClient(name, config));
+            clients.put(name, new OpenAiCompatibleLlmClient(name, config, objectMapper));
             log.info("已注册模型提供方：{} -> {} ({})", name, config.getBaseUrl(), config.getChatModel());
         });
         log.info("模型提供方共 {} 个，默认使用：{}", clients.size(), defaultProvider);

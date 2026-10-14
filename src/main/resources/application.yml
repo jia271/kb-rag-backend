@@ -85,3 +85,12 @@ app:
     top-k: 5
     # RRF 融合参数，60 是常用经验值
     rrf-k: 60
+  chat:
+    # 每次问答检索多少个片段作为依据
+    top-k: 5
+    # 多轮对话保留最近多少轮、最多多少字符
+    max-history-turns: 6
+    max-history-chars: 4000
+    # 塞进提示词的资料字符上限，防止上下文过长
+    max-context-chars: 6000
+    max-sessions: 500
