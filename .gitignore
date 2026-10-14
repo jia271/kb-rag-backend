@@ -37,3 +37,4 @@ build/
 *-local.yml
 *.log
 .tmp/
+data/

@@ -2,6 +2,7 @@ package com.example.rag.api;
 
 import com.example.rag.llm.LlmClient;
 import com.example.rag.llm.LlmClientRegistry;
+import com.example.rag.support.Errors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,7 +59,7 @@ public class LlmPingController {
                 })
                 .onErrorResume(error -> {
                     log.warn("调用模型失败：{}", error.toString());
-                    return Mono.just(failure(client.providerName(), rootMessage(error)));
+                    return Mono.just(failure(client.providerName(), Errors.rootMessage(error)));
                 });
     }
 
@@ -70,11 +71,4 @@ public class LlmPingController {
         return body;
     }
 
-    private String rootMessage(Throwable error) {
-        Throwable cause = error;
-        while (cause.getCause() != null && cause.getCause() != cause) {
-            cause = cause.getCause();
-        }
-        return cause.getClass().getSimpleName() + ": " + cause.getMessage();
-    }
 }
