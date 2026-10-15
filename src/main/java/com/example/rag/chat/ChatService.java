@@ -36,17 +36,20 @@ public class ChatService {
     private final HybridSearchService searchService;
     private final LlmGateway llmGateway;
     private final RagPromptBuilder promptBuilder;
+    private final RelevanceGate relevanceGate;
     private final ConversationStore conversations;
     private final ChatProperties properties;
 
     public ChatService(HybridSearchService searchService,
                        LlmGateway llmGateway,
                        RagPromptBuilder promptBuilder,
+                       RelevanceGate relevanceGate,
                        ConversationStore conversations,
                        ChatProperties properties) {
         this.searchService = searchService;
         this.llmGateway = llmGateway;
         this.promptBuilder = promptBuilder;
+        this.relevanceGate = relevanceGate;
         this.conversations = conversations;
         this.properties = properties;
     }
@@ -130,7 +133,7 @@ public class ChatService {
     private Prepared prepare(String question, String sessionId, Integer topK, String mode) throws Exception {
         int limit = topK == null || topK <= 0 ? properties.getTopK() : topK;
         SearchMode searchMode = SearchMode.from(mode);
-        List<SearchHit> hits = searchService.search(question, limit, searchMode);
+        List<SearchHit> hits = relevanceGate.filter(searchService.search(question, limit, searchMode));
         // 这一行跑在弹性线程池里，追踪号会由 BlockingCalls 还原到 MDC，
         // 所以日志前缀里能看出它属于哪一次请求
         log.info("检索完成：命中 {} 条片段（模式 {}）", hits.size(), searchMode.name().toLowerCase());

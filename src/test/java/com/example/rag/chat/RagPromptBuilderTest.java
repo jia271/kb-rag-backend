@@ -64,6 +64,6 @@ class RagPromptBuilderTest {
     }
 
     private SearchHit hit(String content, String fileName, String heading, Integer pageNumber) {
-        return new SearchHit(1L, 2L, fileName, 0, pageNumber, heading, content, 1, 1, 0.5);
+        return new SearchHit(1L, 2L, fileName, 0, pageNumber, heading, content, 1, 1, 4.0, 0.5, 0.03);
     }
 }

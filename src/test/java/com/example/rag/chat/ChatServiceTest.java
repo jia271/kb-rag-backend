@@ -35,6 +35,7 @@ class ChatServiceTest {
             new LlmGateway(new LlmClientRegistry(new LlmProperties(), new ObjectMapper()),
                     new LlmProperties(), mock(UsageRecorder.class)),
             new RagPromptBuilder(properties),
+            new RelevanceGate(properties),
             conversations,
             properties);
 

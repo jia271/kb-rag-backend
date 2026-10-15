@@ -234,6 +234,8 @@ public class ChunkIndexService {
                     document.get(F_CONTENT),
                     fromKeyword ? rank : null,
                     fromKeyword ? null : rank,
+                    fromKeyword ? Double.valueOf(scoreDoc.score) : null,
+                    fromKeyword ? null : Double.valueOf(scoreDoc.score),
                     scoreDoc.score));
             rank++;
         }

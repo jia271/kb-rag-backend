@@ -1,0 +1,74 @@
+[
+  {
+    "id": "q1",
+    "question": "分块为什么不能切得太大？",
+    "keywords": ["切得太大"],
+    "answerable": true
+  },
+  {
+    "id": "q2",
+    "question": "为什么要同时用关键词和向量两种检索？",
+    "keywords": ["关键词检索", "向量检索"],
+    "answerable": true
+  },
+  {
+    "id": "q3",
+    "question": "什么是检索增强生成？",
+    "keywords": ["检索增强生成"],
+    "answerable": true
+  },
+  {
+    "id": "q4",
+    "question": "文档上传之后系统会自动做什么？",
+    "keywords": ["自动解析"],
+    "answerable": true
+  },
+  {
+    "id": "q5",
+    "question": "答案为什么必须带上出处？",
+    "keywords": ["引用来源"],
+    "answerable": true
+  },
+  {
+    "id": "q6",
+    "question": "系统对首字延迟的要求是多少？",
+    "keywords": ["首字延迟"],
+    "answerable": true
+  },
+  {
+    "id": "q7",
+    "question": "第一版明确不做的功能有哪些？",
+    "keywords": ["权限体系"],
+    "answerable": true
+  },
+  {
+    "id": "q8",
+    "question": "系统怎么控制调用模型的成本？",
+    "keywords": ["token 消耗"],
+    "answerable": true
+  },
+  {
+    "id": "q9",
+    "question": "公司年会在几月几号举办？",
+    "keywords": [],
+    "answerable": false
+  },
+  {
+    "id": "q10",
+    "question": "报销需要提供哪些发票？",
+    "keywords": [],
+    "answerable": false
+  },
+  {
+    "id": "q11",
+    "question": "部署这套系统需要几核几 G 的服务器？",
+    "keywords": [],
+    "answerable": false
+  },
+  {
+    "id": "q12",
+    "question": "这块业务明年的预算是多少？",
+    "keywords": [],
+    "answerable": false
+  }
+]

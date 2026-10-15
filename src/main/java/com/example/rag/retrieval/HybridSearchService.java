@@ -50,7 +50,8 @@ public class HybridSearchService {
             merged.put(hit.chunkId(), hit);
         }
         for (SearchHit hit : vectorHits) {
-            merged.merge(hit.chunkId(), hit, (existing, incoming) -> existing.withVectorRank(incoming.vectorRank()));
+            merged.merge(hit.chunkId(), hit,
+                    (existing, incoming) -> existing.withVector(incoming.vectorRank(), incoming.vectorScore()));
         }
 
         Map<Long, Double> fused = RrfFusion.fuse(

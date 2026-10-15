@@ -21,4 +21,11 @@ public class ChatProperties {
 
     /** 最多同时保留多少个会话，超出后淘汰最久未使用的 */
     private int maxSessions = 500;
+
+    /**
+     * 相关性门控：检索结果里最高的 BM25 分数低于它时，视为没有找到依据。
+     * 0 表示关闭。实测可回答的问题约 4.7 分、不可回答的约 1.0 分，
+     * 但样本只有 12 条，所以默认不开，需要按自己的语料重新标定后再启用。
+     */
+    private double minKeywordScore = 0.0;
 }

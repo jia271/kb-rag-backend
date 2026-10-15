@@ -14,16 +14,18 @@ public record SearchHit(
         String content,
         Integer keywordRank,
         Integer vectorRank,
+        Double keywordScore,
+        Double vectorScore,
         double score
 ) {
 
-    public SearchHit withVectorRank(Integer rank) {
+    public SearchHit withVector(Integer rank, Double vectorScore) {
         return new SearchHit(chunkId, documentId, fileName, orderIndex, pageNumber, heading, content,
-                keywordRank, rank, score);
+                keywordRank, rank, keywordScore, vectorScore, score);
     }
 
     public SearchHit withScore(double newScore) {
         return new SearchHit(chunkId, documentId, fileName, orderIndex, pageNumber, heading, content,
-                keywordRank, vectorRank, newScore);
+                keywordRank, vectorRank, keywordScore, vectorScore, newScore);
     }
 }
