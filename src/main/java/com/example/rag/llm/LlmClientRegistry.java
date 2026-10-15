@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,6 +47,7 @@ public class LlmClientRegistry {
     }
 
     public Map<String, LlmClient> all() {
-        return Map.copyOf(clients);
+        // 保持注册顺序，路由的兜底顺序依赖它
+        return Collections.unmodifiableMap(clients);
     }
 }

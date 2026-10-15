@@ -9,10 +9,13 @@ public record AskResponse(
         String sessionId,
         String answer,
         List<Citation> citations,
-        long tookMillis
+        long tookMillis,
+        int promptTokens,
+        int completionTokens
 ) {
 
     public static AskResponse from(AskResult result) {
-        return new AskResponse(result.sessionId(), result.answer(), result.citations(), result.tookMillis());
+        return new AskResponse(result.sessionId(), result.answer(), result.citations(), result.tookMillis(),
+                result.promptTokens(), result.completionTokens());
     }
 }

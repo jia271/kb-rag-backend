@@ -45,7 +45,9 @@ try {
     Write-Host $response.answer
     Write-Host ''
     if ($response.citations -and $response.citations.Count -gt 0) {
-        Write-Host ('Sources ({0}), took {1} ms:' -f $response.citations.Count, $response.tookMillis)
+        Write-Host ('Sources ({0}), took {1} ms, tokens {2}+{3}:' -f `
+                $response.citations.Count, $response.tookMillis,
+                $response.promptTokens, $response.completionTokens)
         foreach ($citation in $response.citations) {
             $location = $citation.fileName
             if ($citation.heading) { $location += ' / ' + $citation.heading }

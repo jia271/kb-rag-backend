@@ -4,7 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,6 +18,12 @@ public class LlmProperties {
 
     /** 默认使用的模型提供方 */
     private String defaultProvider = "deepseek";
+
+    /**
+     * 降级顺序。排在前面的先试，失败后依次尝试后面的。
+     * 留空则只使用默认提供方。
+     */
+    private List<String> fallbackOrder = new ArrayList<>();
 
     /** 提供方名称 -> 连接配置 */
     private Map<String, Provider> providers = new LinkedHashMap<>();
@@ -38,7 +46,12 @@ public class LlmProperties {
         /** 单次请求超时 */
         private Duration timeout = Duration.ofSeconds(60);
 
-        /** 失败重试次数 */
-        private int maxRetries = 1;
+        /**
+         * 计费单价，单位：元 / 千 token。
+         * 这里的默认值只是占位，请按你自己账户的实际计费填写。
+         */
+        private double pricePer1kPrompt = 0.0;
+
+        private double pricePer1kCompletion = 0.0;
     }
 }

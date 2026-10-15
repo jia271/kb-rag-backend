@@ -2,7 +2,9 @@ package com.example.rag.chat;
 
 import com.example.rag.config.ChatProperties;
 import com.example.rag.config.LlmProperties;
+import com.example.rag.llm.LlmGateway;
 import com.example.rag.llm.LlmClientRegistry;
+import com.example.rag.usage.UsageRecorder;
 import com.example.rag.retrieval.HybridSearchService;
 import com.example.rag.retrieval.SearchMode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +32,8 @@ class ChatServiceTest {
     private final ChatService service = new ChatService(
             search,
             // 故意不给任何模型提供方：一旦代码走到调用模型那一步，测试就会失败
-            new LlmClientRegistry(new LlmProperties(), new ObjectMapper()),
+            new LlmGateway(new LlmClientRegistry(new LlmProperties(), new ObjectMapper()),
+                    new LlmProperties(), mock(UsageRecorder.class)),
             new RagPromptBuilder(properties),
             conversations,
             properties);

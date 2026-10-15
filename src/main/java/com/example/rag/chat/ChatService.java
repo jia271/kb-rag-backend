@@ -2,7 +2,9 @@ package com.example.rag.chat;
 
 import com.example.rag.config.ChatProperties;
 import com.example.rag.llm.ChatMessage;
-import com.example.rag.llm.LlmClientRegistry;
+import com.example.rag.llm.LlmCallContext;
+import com.example.rag.llm.LlmGateway;
+import com.example.rag.llm.StreamChunk;
 import com.example.rag.retrieval.HybridSearchService;
 import com.example.rag.retrieval.SearchHit;
 import com.example.rag.retrieval.SearchMode;
@@ -15,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 问答编排：检索 → 组装提示词 → 生成答案 → 标注引用。
@@ -31,18 +34,18 @@ public class ChatService {
             "知识库中没有找到与该问题相关的内容。请先上传相关文档，或者换一种说法再问。";
 
     private final HybridSearchService searchService;
-    private final LlmClientRegistry llmRegistry;
+    private final LlmGateway llmGateway;
     private final RagPromptBuilder promptBuilder;
     private final ConversationStore conversations;
     private final ChatProperties properties;
 
     public ChatService(HybridSearchService searchService,
-                       LlmClientRegistry llmRegistry,
+                       LlmGateway llmGateway,
                        RagPromptBuilder promptBuilder,
                        ConversationStore conversations,
                        ChatProperties properties) {
         this.searchService = searchService;
-        this.llmRegistry = llmRegistry;
+        this.llmGateway = llmGateway;
         this.promptBuilder = promptBuilder;
         this.conversations = conversations;
         this.properties = properties;
@@ -69,13 +72,14 @@ public class ChatService {
                     if (prepared.hits().isEmpty()) {
                         conversations.append(session, question, NO_CONTEXT_ANSWER);
                         return Mono.just(new AskResult(session, NO_CONTEXT_ANSWER, prepared.citations(),
-                                System.currentTimeMillis() - start));
+                                System.currentTimeMillis() - start, 0, 0));
                     }
-                    return llmRegistry.defaultClient().chat(prepared.messages())
+                    return llmGateway.chat(prepared.messages(), LlmCallContext.of(session, "chat"))
                             .map(result -> {
                                 conversations.append(session, question, result.content());
                                 return new AskResult(session, result.content(), prepared.citations(),
-                                        System.currentTimeMillis() - start);
+                                        System.currentTimeMillis() - start,
+                                        result.promptTokens(), result.completionTokens());
                             });
                 });
     }
@@ -86,27 +90,38 @@ public class ChatService {
         if (prepared.hits().isEmpty()) {
             conversations.append(session, question, NO_CONTEXT_ANSWER);
             return head.concatWith(Flux.<ChatStreamEvent>just(new ChatStreamEvent.Completed(
-                    NO_CONTEXT_ANSWER, 0, System.currentTimeMillis() - start, session)));
+                    NO_CONTEXT_ANSWER, 0, System.currentTimeMillis() - start, session, 0, 0)));
         }
 
         StringBuilder answer = new StringBuilder();
         long[] firstTokenMillis = {0};
+        AtomicReference<int[]> usage = new AtomicReference<>(new int[]{0, 0});
 
-        Flux<ChatStreamEvent> body = llmRegistry.defaultClient()
-                .streamChat(prepared.messages())
-                .doOnNext(delta -> {
-                    if (firstTokenMillis[0] == 0) {
+        Flux<ChatStreamEvent> body = llmGateway
+                .stream(prepared.messages(), LlmCallContext.of(session, "stream"))
+                .doOnNext(chunk -> {
+                    if (chunk.hasText() && firstTokenMillis[0] == 0) {
                         // 首字延迟：从收到提问到吐出第一个字的时间，是流式体验最关键的指标
                         firstTokenMillis[0] = System.currentTimeMillis() - start;
                     }
-                    answer.append(delta);
+                    if (chunk.hasText()) {
+                        answer.append(chunk.delta());
+                    }
+                    if (chunk.hasUsage()) {
+                        usage.set(new int[]{
+                                chunk.promptTokens() == null ? 0 : chunk.promptTokens(),
+                                chunk.completionTokens() == null ? 0 : chunk.completionTokens()});
+                    }
                 })
-                .map(delta -> (ChatStreamEvent) new ChatStreamEvent.Delta(delta))
+                .filter(StreamChunk::hasText)
+                .map(chunk -> (ChatStreamEvent) new ChatStreamEvent.Delta(chunk.delta()))
                 .concatWith(Mono.<ChatStreamEvent>fromCallable(() -> {
                     String text = answer.toString();
                     conversations.append(session, question, text);
+                    int[] tokens = usage.get();
                     return new ChatStreamEvent.Completed(
-                            text, firstTokenMillis[0], System.currentTimeMillis() - start, session);
+                            text, firstTokenMillis[0], System.currentTimeMillis() - start, session,
+                            tokens[0], tokens[1]);
                 }));
 
         return head.concatWith(body);
@@ -114,7 +129,11 @@ public class ChatService {
 
     private Prepared prepare(String question, String sessionId, Integer topK, String mode) throws Exception {
         int limit = topK == null || topK <= 0 ? properties.getTopK() : topK;
-        List<SearchHit> hits = searchService.search(question, limit, SearchMode.from(mode));
+        SearchMode searchMode = SearchMode.from(mode);
+        List<SearchHit> hits = searchService.search(question, limit, searchMode);
+        // 这一行跑在弹性线程池里，追踪号会由 BlockingCalls 还原到 MDC，
+        // 所以日志前缀里能看出它属于哪一次请求
+        log.info("检索完成：命中 {} 条片段（模式 {}）", hits.size(), searchMode.name().toLowerCase());
         List<ChatMessage> messages = promptBuilder.build(question, hits, conversations.history(sessionId));
         return new Prepared(hits, messages, Citation.from(hits));
     }

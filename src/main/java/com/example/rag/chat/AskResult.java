@@ -6,6 +6,8 @@ public record AskResult(
         String sessionId,
         String answer,
         List<Citation> citations,
-        long tookMillis
+        long tookMillis,
+        int promptTokens,
+        int completionTokens
 ) {
 }

@@ -58,6 +58,11 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     }
 
     @Override
+    public String modelName() {
+        return provider.getChatModel();
+    }
+
+    @Override
     public boolean available() {
         return provider.getApiKey() != null && !provider.getApiKey().isBlank();
     }
@@ -84,7 +89,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
      * 最后以 data: [DONE] 结束。
      */
     @Override
-    public Flux<String> streamChat(List<ChatMessage> messages) {
+    public Flux<StreamChunk> streamChat(List<ChatMessage> messages) {
         return webClient.post()
                 .uri("/chat/completions")
                 .bodyValue(buildRequestBody(messages, true))
@@ -92,15 +97,24 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 .bodyToFlux(String.class)
                 .takeUntil(STREAM_DONE::equals)
                 .filter(payload -> !STREAM_DONE.equals(payload))
-                .concatMap(this::contentOf)
-                .filter(text -> !text.isEmpty());
+                .concatMap(this::chunksOf)
+                .filter(chunk -> chunk.hasText() || chunk.hasUsage());
     }
 
-    private Mono<String> contentOf(String payload) {
+    private Mono<StreamChunk> chunksOf(String payload) {
         try {
-            JsonNode delta = objectMapper.readTree(payload)
-                    .path("choices").path(0).path("delta").path("content");
-            return delta.isMissingNode() || delta.isNull() ? Mono.empty() : Mono.just(delta.asText());
+            JsonNode root = objectMapper.readTree(payload);
+            JsonNode usage = root.path("usage");
+            if (!usage.isMissingNode() && !usage.isNull()) {
+                return Mono.just(StreamChunk.usage(
+                        usage.path("prompt_tokens").asInt(0),
+                        usage.path("completion_tokens").asInt(0)));
+            }
+            JsonNode delta = root.path("choices").path(0).path("delta").path("content");
+            if (delta.isMissingNode() || delta.isNull() || delta.asText().isEmpty()) {
+                return Mono.empty();
+            }
+            return Mono.just(StreamChunk.text(delta.asText()));
         } catch (JsonProcessingException error) {
             log.warn("无法解析流式响应片段，已跳过：{}", payload);
             return Mono.empty();
@@ -111,10 +125,18 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         List<Map<String, String>> wireMessages = messages.stream()
                 .map(message -> Map.of("role", message.role(), "content", message.content()))
                 .toList();
+        if (!stream) {
+            return Map.of(
+                    "model", provider.getChatModel(),
+                    "messages", wireMessages,
+                    "stream", false);
+        }
+        // 打开用量回传：不打开的话流式请求拿不到 token 数，成本就无从统计
         return Map.of(
                 "model", provider.getChatModel(),
                 "messages", wireMessages,
-                "stream", stream);
+                "stream", true,
+                "stream_options", Map.of("include_usage", true));
     }
 
     private int promptTokens(ChatCompletionResponse response) {

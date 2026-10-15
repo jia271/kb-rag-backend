@@ -38,11 +38,18 @@ management:
 logging:
   level:
     com.example.rag: DEBUG
+  pattern:
+    # 把追踪号打进每一行日志，便于按一次请求把日志串起来
+    console: "%d{HH:mm:ss.SSS} %5p [%X{traceId:--------}] [%15.15t] %-36.36logger{36} : %m%n"
 
 # 模型接入配置：多提供方从第一天就预留好，M4 阶段直接在这里加备选模型
 app:
   llm:
     default-provider: deepseek
+    # 降级顺序：默认提供方排最前，失败后依次尝试后面的
+    fallback-order:
+      - deepseek
+      - deepseek-pro
     providers:
       deepseek:
         enabled: true
@@ -50,7 +57,18 @@ app:
         api-key: ${DEEPSEEK_API_KEY:}
         chat-model: deepseek-chat
         timeout: 60s
-        max-retries: 1
+        # 单价为占位值，请按你账户的实际计费填写（单位：元 / 千 token）
+        price-per-1k-prompt: 0.002
+        price-per-1k-completion: 0.008
+      # 备用提供方：同一个密钥、换一个模型，用来演示和验证自动降级
+      deepseek-pro:
+        enabled: true
+        base-url: https://api.deepseek.com
+        api-key: ${DEEPSEEK_API_KEY:}
+        chat-model: deepseek-v4-pro
+        timeout: 60s
+        price-per-1k-prompt: 0.004
+        price-per-1k-completion: 0.012
   ingestion:
     # 上传的原始文件落盘位置
     storage-dir: ./data/uploads

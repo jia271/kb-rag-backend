@@ -1,5 +1,6 @@
 package com.example.rag.support;
 
+import org.slf4j.MDC;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.scheduler.Schedulers;
@@ -16,12 +17,20 @@ public final class BlockingCalls {
     }
 
     public static <T> Mono<T> call(Callable<T> action) {
-        return Mono.create((MonoSink<T> sink) -> Schedulers.boundedElastic().schedule(() -> {
-            try {
-                sink.success(action.call());
-            } catch (Throwable error) {
-                sink.error(error);
-            }
+        return Mono.<T>deferContextual(contextView -> Mono.create((MonoSink<T> sink) -> {
+            // 追踪号存在 Reactor Context 里，进工作线程时手动还原到 MDC，
+            // 否则日志里看不出这些行属于同一次请求
+            String traceId = contextView.getOrDefault(TraceContext.KEY, TraceContext.UNKNOWN);
+            Schedulers.boundedElastic().schedule(() -> {
+                MDC.put(TraceContext.KEY, traceId);
+                try {
+                    sink.success(action.call());
+                } catch (Throwable error) {
+                    sink.error(error);
+                } finally {
+                    MDC.remove(TraceContext.KEY);
+                }
+            });
         }));
     }
 

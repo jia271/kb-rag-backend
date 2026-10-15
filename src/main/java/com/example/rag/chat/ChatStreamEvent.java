@@ -24,8 +24,8 @@ public interface ChatStreamEvent {
         }
     }
 
-    record Completed(String answer, long firstTokenMillis, long tookMillis, String sessionId)
-            implements ChatStreamEvent {
+    record Completed(String answer, long firstTokenMillis, long tookMillis, String sessionId,
+                     int promptTokens, int completionTokens) implements ChatStreamEvent {
         @Override
         public String eventName() {
             return "completed";
